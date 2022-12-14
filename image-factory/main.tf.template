@@ -1,0 +1,34 @@
+# Create a copy without the .template suffix and adapt it to your needs.
+# You need a bucket where Terraform can store its state.
+# Unless you have one already, you can create one here:
+# https://console.cloud.google.com/storage
+
+terraform {
+  backend "gcs" {
+    bucket = "name-of-my-bucket"
+    prefix = "db-vm"
+  }
+}
+
+variable "project" {
+  type    = string
+  default = "my-project-11111"
+}
+
+variable "region" {
+  type    = string
+  default = "us-central1"
+}
+
+variable "zone" {
+  type = string
+  default = "us-central1-a"
+}
+
+module "db_vm" {
+  source                  = "<FILL_ME_IN>"
+  project                 = var.project
+  region                  = var.region
+  zone                    = var.zone
+  install_from_base_image = var.install_from_base_image
+}
