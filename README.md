@@ -31,7 +31,7 @@ The separate data disk would allow me to recreate the VM at any time to upgrade 
 
 ## Tools you'll need
 
-* [GNU Make](https://www.gnu.org/software/make/) to build the image, but alternatively you can run the commands in the Makefile yourself
+* [GNU Make](https://www.gnu.org/software/make/) to build the image. Alternatively, you can run the commands in the Makefile yourself.
 * [terraform](https://www.terraform.io) to turn the code in this repo into working infrastructure
 * [gcloud](https://cloud.google.com/cli) to interact with your GCP resources
 
@@ -39,18 +39,16 @@ The separate data disk would allow me to recreate the VM at any time to upgrade 
 
 You need a GCP project, so either create one using the [console](https://console.cloud.google.com/) or run whatever infrastructure code you usually use to create projects.
 
-In the `image-factory` directory, create a copy of `main.tf.template`, called `main.tf`. Edit it to suit your setup.
+In the `test-local` directory, create a copy of `main.tf.template`, called `main.tf`. Edit it to suit your setup.
 
-Then run these commands to create a boot image:
+Then run these commands to start up a test instance:
 
 ```bash
-cd image-factory
+cd test-local
 gcloud auth login
 gcloud auth application-default login
 terraform init
-terraform apply -auto-approve -var="install_from_base_image=true"
-make image
-terraform destroy -auto-approve
+terraform apply
 ```
 
 Now you can start a VM using this boot image:
