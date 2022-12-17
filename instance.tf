@@ -11,7 +11,7 @@ resource "google_compute_network" "db_network" {
 resource "google_compute_subnetwork" "db_subnetwork" {
   name          = "db-subnetwork"
   network       = google_compute_network.db_network.id
-  ip_cidr_range = "10.0.1.0/24"
+  ip_cidr_range = "192.168.1.0/24"
   region        = var.region
 }
 
@@ -76,17 +76,17 @@ resource "google_compute_instance" "db_vm" {
   boot_disk {
     initialize_params {
       # image = "debian-cloud/debian-11"
-      image = local.image
+      image = var.image
       labels = {
         usage = "db-boot-disk"
       }
     }
   }
 
-  attached_disk {
-    source      = google_compute_disk.data_disk.name
-    device_name = "db-data"
-  }
+  # attached_disk {
+  #   source      = google_compute_disk.data_disk.name
+  #   device_name = "db-data"
+  # }
 
   network_interface {
     subnetwork = google_compute_subnetwork.db_subnetwork.id
@@ -97,22 +97,21 @@ resource "google_compute_instance" "db_vm" {
     # }
   }
 
-  metadata_startup_script = <<EOT
-# Set up the PostgreSQL data partition on a separate disk
-fsck /dev/sdb
-if [ "$?" -eq 8 ] ; then
-    mkdir -p /var/lib/postgresql
-    sudo mkfs -t ext4 /dev/sdb
-    echo '/dev/sdb /var/lib/postgresql ext4 defaults 0 2' >> /etc/fstab
-    mount /var/lib/postgresql
-fi
+  #   metadata_startup_script = <<EOT
+  # # Set up the PostgreSQL data partition on a separate disk
+  # fsck /dev/sdb
+  # if [ "$?" -eq 8 ] ; then
+  #     mkdir -p /var/lib/postgresql
+  #     mkfs -t ext4 /dev/sdb
+  #     echo '/dev/sdb /var/lib/postgresql ext4 defaults 0 2' >> /etc/fstab
+  #     mount /var/lib/postgresql
+  # fi
+  # EOT
 
-# Install and set up PostgreSQL if not already done
-# if ! which psql ; then
-#     apt update
-#     apt install -y postgresql postgresql-contrib
-#     systemctl enable postgresql
-#     systemctl start postgresql
-# fi
+  metadata_startup_script = <<EOT
+apt update
+apt install -y postgresql postgresql-contrib
+systemctl enable postgresql
+systemctl start postgresql
 EOT
 }
