@@ -2,11 +2,11 @@
 
 ## Cloud SQL databases at a monthly cost of one hamburger meal
 
-The rationale of this project is that I want to use SQL databases for my hobby projects without paying enterprise-level money for them.
+The rationale of this project is that I want to use SQL databases for my hobby projects without paying enterprise-level money for them. I want one single database server VM that can hold the databases of all applications I run. I do not need redundancy, because if my server goes down I will just create it again and restore its state from a backup file that I fetch from a bucket.
 
 I would be the only user, and the amounts of data would not be petabytes, not even terabytes, but rather gigabytes at most. Let's set a budget of US$ 10 each month, roughly the price of a hamburger meal somewhere.
 
-These are the options I explored. All are in the Google Cloud Platform, because that's what I use. All costs are calculated with the [Google Cloud Pricing Calculator](https://cloud.google.com/products/calculator). I want 10 GiB of storage and 100 GiB backup capacity, and I would insert data at a monthly pace of 10 MiB and read 1 GiB. for fair comparison I want the service to be available 24/7.
+These are the options I explored. All are in the Google Cloud Platform because that's what I use. All costs are calculated with the [Google Cloud Pricing Calculator](https://cloud.google.com/products/calculator). I want 10 GiB of storage and 100 GiB backup capacity, and I would insert data at a monthly pace of 10 MiB and read 1 GiB. for fair comparison I want the service to be available 24/7.
 
 | Alternative | Price/month | Observations |
 | --- | --- | --- |
@@ -55,13 +55,9 @@ Your server will start from an [image](https://console.cloud.google.com/compute/
 image-factory/build.sh
 ```
 
-## Set it all up
+## Start a test VM
 
-In the `test-local` directory, create a copy of `main.tf.template`, called `main.tf`. Edit it to suit your setup.
-
-
-
-Then run these commands to start up a test instance:
+The `test-local` directory contains Terraform code to include this module locally. Just create a copy of `main.tf.template` called `main.tf`, and edit it to suit your setup. Then you can run these commands to start up a test instance:
 
 ```bash
 cd test-local
@@ -69,13 +65,11 @@ terraform init
 terraform apply
 ```
 
-Now you can start a VM using this boot image:
+Even though it is not directly exposed to the Internet, you can connect to it with ssh through a tunnel:
 
 ```bash
-terraform apply
+gcloud compute ssh "db-vm" --tunnel-through-iap
 ```
-
-
 
 
 
@@ -88,26 +82,3 @@ Would probably need VPC network peering to restrict access
 
 Pretty good intro on setting up postgres
 * https://linuxize.com/post/how-to-install-postgresql-on-debian-10/
-
-Create a custom boot image to not have to install everything on boot
-* https://cloud.google.com/compute/docs/images/create-custom
-
-
-Create an image:
-Name: psql-<DATE>-<TIME>
-Source: Disk
-Source disk: image-builder-vm
-Location: Regional
-Select location: <REGION>
-Family: psql
-Description: Debian image with a PostgreSQL server
-Encryption: Google-managed encryption key
-
-gcloud compute images create custom-psql-$(date +%y%m%d-%H%M) --project=go-crazy-347203 --description=Debian\ image\ with\ a\ PostgreSQL\ server --family=custom-psql --source-disk=image-builder-vm --source-disk-zone=us-central1-a --storage-location=us-central1
-
-
-
-
-IDEA:
-Download PostgreSQL from https://debian.pkgs.org/11/debian-main-amd64/postgresql_13+225_all.deb.html
-and gcloud scp it to the VM. Then it does not need an egress configured.
