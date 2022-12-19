@@ -1,5 +1,7 @@
 #!/bin/sh -e
 
+cd `dirname $0`
+
 keep_vm=0
 for arg in "$@" ; do
     if [ "$arg" == '--keep-vm' ] ; then
@@ -72,7 +74,7 @@ for retry in {60..0} ; do
 done
 log ""
 log "Uploading and running setup script"
-log_command gcloud compute scp `dirname $0`/vm_setup.sh ${vm_instance}:/tmp/setup.sh
+log_command gcloud compute scp vm_setup.sh ${vm_instance}:/tmp/setup.sh
 log_command gcloud compute ssh ${vm_instance} --command "sudo sh < /tmp/setup.sh"
 log_command gcloud compute ssh ${vm_instance} --command "echo ${image} | sudo tee /etc/image-version"
 
