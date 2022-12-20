@@ -21,3 +21,8 @@ variable "data_disk_gigabytes" {
   default     = 10
   description = "Size of database storage disk in GB. Default and smallest allowed value is 10."
 }
+
+variable "schemas" {
+  type        = list(string)
+  description = "List of schemas/users to create"
+}

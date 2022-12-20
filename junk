@@ -1,0 +1,29 @@
+    - name: Create a database
+      become: true
+      become_user: postgres
+      community.postgresql.postgresql_db:
+        name: acme
+
+    - name: Create a user
+      become: true
+      become_user: postgres
+      community.postgresql.postgresql_user:
+        db: acme
+        name: acme
+        password: emca
+
+    - name: Allow user to log on
+      become: true
+      become_user: postgres
+      community.postgresql.postgresql_pg_hba:
+        dest: /etc/postgresql/13/main/pg_hba.conf
+        contype: host
+        users: acme
+        source: all
+        databases: acme
+        method: password
+
+    - name: Restart PostgreSQL
+      ansible.builtin.systemd:
+        name: postgresql.service
+        state: restarted

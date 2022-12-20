@@ -1,0 +1,31 @@
+- name: 'Set up base image'
+  hosts: localhost
+  connection: local
+  tasks:
+    - name: 'Apache: redirect to phppgadmin'
+      ansible.builtin.lineinfile:
+        path: /etc/apache2/sites-enabled/000-default.conf
+        insertafter: "^\tDocumentRoot /var/www/html$"
+        line: "\tRedirectMatch permanent \"^/$\" /phppgadmin"
+
+    - name: 'Apache: bind to localhost'
+      ansible.builtin.lineinfile:
+        path: /etc/apache2/ports.conf
+        regex: '^Listen'
+        line: 'Listen 127.0.0.1:80'
+
+    - name: 'Restart Apache'
+      ansible.builtin.systemd:
+        name: apache2.service
+        state: restarted
+
+    - name: 'PostgreSQL: bind to all interfaces'
+      ansible.builtin.lineinfile:
+        path: /etc/postgresql/13/main/postgresql.conf
+        insertbefore: '^port = 5432'
+        line: "listen_addresses = '*'"
+
+    - name: 'Restart PostgreSQL'
+      ansible.builtin.systemd:
+        name: postgresql.service
+        state: restarted

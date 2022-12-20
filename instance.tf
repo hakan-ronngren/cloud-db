@@ -22,22 +22,23 @@ resource "google_compute_firewall" "db_network_ingress" {
 
   allow {
     protocol = "tcp"
-    ports    = ["22"]
+    ports    = ["22", "5432"]
   }
 
   source_ranges = ["0.0.0.0/0"]
 }
 
-resource "google_compute_firewall" "db_network_egress" {
-  name      = "db-network-egress"
-  network   = google_compute_network.db_network.name
-  direction = "EGRESS"
+# TODO: delete this one if everything still works. We have no gateway anyway
+# resource "google_compute_firewall" "db_network_egress" {
+#   name      = "db-network-egress"
+#   network   = google_compute_network.db_network.name
+#   direction = "EGRESS"
 
-  allow {
-    protocol = "tcp"
-    ports    = ["443"]
-  }
-}
+#   allow {
+#     protocol = "tcp"
+#     ports    = ["443"]
+#   }
+# }
 
 # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_instance
 resource "google_compute_instance" "db_vm" {
@@ -49,7 +50,6 @@ resource "google_compute_instance" "db_vm" {
 
   boot_disk {
     initialize_params {
-      # image = "debian-cloud/debian-11"
       image = var.image
       labels = {
         usage = "db-boot-disk"
@@ -67,7 +67,6 @@ resource "google_compute_instance" "db_vm" {
   }
 
   metadata_startup_script = <<EOT
-
 # Set up the PostgreSQL data partition on the separate data disk
 cd /
 fsck /dev/sdb
@@ -83,14 +82,29 @@ if [ "$?" -eq 8 ] ; then
     systemctl start postgresql
 fi
 
-# Ensure the presence of the pgadmin user (for the phppgadmin web UI) and save
-# the password in a file in the /root directory.
+for schema in ${join(" ", var.schemas)} ; do
+    ansible localhost --become --become-user postgres -c local \
+        -m community.postgresql.postgresql_db \
+        -a "name=$${schema}"
+
+    ansible localhost --become --become-user postgres -c local \
+        -m community.postgresql.postgresql_user \
+        -a "db=$${schema} name=$${schema} password=$${schema}"
+
+    ansible localhost --become --become-user postgres -c local \
+        -m community.postgresql.postgresql_pg_hba \
+        -a "dest=/etc/postgresql/13/main/pg_hba.conf contype=host users=$${schema} source=all method=password databases=$${schema}"
+done
+
+# Ensure the presence of the pgadmin user (for the phppgadmin web UI)
+# TODO: do this with ansible as well
 cd /
 matches=$(sudo -u postgres psql -tAc "select count(rolname) from pg_roles where rolname='pgadmin'")
 if [ "$${matches}" -eq 0 ] ; then
     sudo -u postgres psql -c "CREATE USER pgadmin WITH SUPERUSER PASSWORD 'changeme'"
     echo 'host    all             pgadmin         127.0.0.1/32            password' >> /etc/postgresql/13/main/pg_hba.conf
-    systemctl restart postgresql
 fi
+
+systemctl restart postgresql
 EOT
 }

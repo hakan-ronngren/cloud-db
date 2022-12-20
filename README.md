@@ -20,12 +20,10 @@ So I decided to wire my own solution. I navigated to (Compute Engine | VM instan
 
 | Item | Monthly estimate |
 | --- | --- |
-| e2-micro (2 vCPU + 1 GB memory) | $6.11 |
+| e2-micro (2 vCPU + 1 GB memory) | $6.73 |
 | 10 GB standard persistent disk (boot) | $0.40 |
 | 10 GB standard persistent disk (data) | $0.40 |
-| __Total__ | __$6.91__ |
-
-If I used an f1-micro with 1 vCPU and 614 MB memory, the price would go down to $4.68 a month, but this might even be too small.
+| __Total__ | __$7.13__ |
 
 The separate data disk would allow me to recreate the VM at any time to upgrade it.
 
@@ -97,6 +95,6 @@ Would probably need VPC network peering to restrict access
 * https://cloud.google.com/vpc/docs/vpc-peering
 * https://cloud.google.com/run/docs/configuring/connecting-vpc
 
-Pretty good intro on setting up postgres
+Ansible PostgreSQL modules
 
-* https://linuxize.com/post/how-to-install-postgresql-on-debian-10/
+* https://docs.ansible.com/ansible/latest/collections/community/postgresql/index.html

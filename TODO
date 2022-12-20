@@ -1,0 +1,4 @@
+☐ Create users with passwords stored in secrets
+☐ Schedule schema backups to a bucket
+✔ Change httpd to listen to 127.0.0.1:80 @done(22-12-20 13:23)
+✔ Allow access to port 5432 @done(22-12-20 14:00)

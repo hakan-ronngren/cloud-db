@@ -3,9 +3,12 @@
 cd `dirname $0`
 
 keep_vm=0
+ssh=0
 for arg in "$@" ; do
     if [ "$arg" == '--keep-vm' ] ; then
         keep_vm=1
+    elif [ "$arg" == '--ssh' ] ; then
+        ssh=1
     else
         echo "Unsupported flag: ${arg}"
         exit 1
@@ -20,10 +23,12 @@ log_file='build.log'
 rm -f ${log_file}
 
 function log() {
+    /bin/echo -n "[`date +%H:%M:%S`] " >> ${log_file}
     /bin/echo "$@" | tee -a ${log_file}
 }
 
 function log_command() {
+    /bin/echo -n "[`date +%H:%M:%S`] " >> ${log_file}
     /bin/echo "$@" >> ${log_file}
     "$@" >> ${log_file} 2>&1
 }
@@ -45,7 +50,7 @@ device_name="db-data"
 project_number=`gcloud projects list --filter="${project}" --format='value(PROJECT_NUMBER)'`
 
 # This dependency will change over time
-base_image="projects/debian-cloud/global/images/`gcloud compute images list | grep '^debian-11-bullseye-v' | awk '{ print $1 }' | sort | tail -1`"
+base_image="projects/debian-cloud/global/images/`gcloud compute images list --filter="family:debian-11 AND architecture:X86_64" --format="value(name)" | sort | tail -1`"
 
 log "Creating a virtual machine"
 log_command gcloud compute instances create ${vm_instance} \
@@ -75,8 +80,14 @@ done
 log ""
 log "Uploading and running setup script"
 log_command gcloud compute scp vm_setup.sh ${vm_instance}:/tmp/setup.sh
+log_command gcloud compute scp playbook.yaml ${vm_instance}:/tmp/playbook.yaml
 log_command gcloud compute ssh ${vm_instance} --command "sudo sh < /tmp/setup.sh"
 log_command gcloud compute ssh ${vm_instance} --command "echo ${image} | sudo tee /etc/image-version"
+
+if [ "${ssh}" -ne "0" ] ; then
+    log "Allowing user to inspect/modify the VM before image build"
+    gcloud compute ssh ${vm_instance}
+fi
 
 if [ "${keep_vm}" -ne "0" ] ; then
     log "Stopping the VM instead of deleting it. You can clean up manually by running this command:"
@@ -94,5 +105,17 @@ log_command gcloud compute images create ${image} \
     --source-disk=${vm_instance} \
     --source-disk-zone=${zone} \
     --storage-location=${region}
+
+# We fail if we try to delete an image that is currently in use
+#
+# log "Deleting old image versions"
+# gcloud compute images list --filter="family:custom-psql" --format="value(name)" | \
+#     sort | \
+#     head -n -1 | \
+#     while read tag
+# do
+#     gcloud compute images delete --quiet "${tag}"
+#     gcloud compute disks delete --quiet "${tag}"
+# done
 
 log "Done!"
