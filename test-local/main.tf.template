@@ -21,7 +21,7 @@ variable "region" {
 }
 
 variable "zone" {
-  type = string
+  type    = string
   default = "us-central1-a"
 }
 
@@ -31,9 +31,28 @@ variable "extra_instance" {
   default     = 0
 }
 
+# In real life, you would fetch the passwords from GCP secrets.
+# You would still want them to be hashed, because Terraform is going
+# to store them in the state blob.
+# You can use the hash-password python script in the root of this
+# repository to produce a PostgreSQL-compatible hash string.
 module "db_vm" {
-  source                  = "<FILL_ME_IN>"
-  project                 = var.project
-  region                  = var.region
-  zone                    = var.zone
-}
+  source  = "<FILL_IN_THE_PATH_OF_YOUR_CLONE_OF_THIS_REPOSITORY>"
+  project = var.project
+  region  = var.region
+  zone    = var.zone
+
+  databases = [
+    {
+      name = "foo",
+      user = "foo",
+      # Fo0
+      md5_password = "md58aa7e7121f6d0c4264a0795b4fff003e"
+    },
+    {
+      name = "bar",
+      user = "bar",
+      # b4R
+      md5_password = "md5d607d04a3fd0f89aab5d0400ffa6c38d"
+    }
+  ]}

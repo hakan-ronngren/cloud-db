@@ -33,20 +33,20 @@ fi
 # Find the pg_hba.conf file in the highest-version postgresql config directory
 hba_conf_path=`find /etc/postgresql -name pg_hba.conf | sort | tail -1`
 
-%{ for schema in schemas ~}
-echo "ensuring the presence of database ${schema}" >> /startup.log
+%{ for database in databases ~}
+echo "ensuring the presence of database ${database["name"]}" >> /startup.log
 
 ansible localhost --become --become-user postgres -c local \
     -m community.postgresql.postgresql_db \
-    -a "name=${schema}"
+    -a "name=${database["name"]}"
 
 ansible localhost --become --become-user postgres -c local \
     -m community.postgresql.postgresql_user \
-    -a "db=${schema} name=${schema} password='${schema}'"
+    -a "db=${database["name"]} name=${database["user"]} password='${database["md5_password"]}'"
 
 ansible localhost --become --become-user postgres -c local \
     -m community.postgresql.postgresql_pg_hba \
-    -a "dest=$${hba_conf_path} contype=host databases=${schema} users=${schema} source=all method=password"
+    -a "dest=$${hba_conf_path} contype=host databases=${database["name"]} users=${database["user"]} source=all method=password"
 %{ endfor ~}
 
 echo "ensuring the presence of the pgadmin user" >> /startup.log
@@ -61,3 +61,5 @@ ansible localhost --become --become-user postgres -c local \
 
 echo "restarting postgresql" >> /startup.log
 systemctl restart postgresql
+
+printf 'To connect as user "foo" to the "foo" database:\n\n$ psql -U foo -h localhost\n\n' > /etc/motd

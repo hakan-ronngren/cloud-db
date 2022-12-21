@@ -22,7 +22,8 @@ variable "data_disk_gigabytes" {
   description = "Size of database storage disk in GB. Default and smallest allowed value is 10."
 }
 
-variable "schemas" {
-  type        = list(string)
-  description = "List of schemas/users to create"
+variable "databases" {
+  type        = list(map(string))
+  description = "List of databases to create. Every map has the keys name, user and md5_password."
+  sensitive   = true
 }

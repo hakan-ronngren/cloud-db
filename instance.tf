@@ -1,4 +1,4 @@
-# Helicopter view:
+# Helicopter view on using Terraform with the GCP:
 # https://cloud.google.com/docs/terraform/get-started-with-terraform
 
 # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_network
@@ -27,18 +27,6 @@ resource "google_compute_firewall" "db_network_ingress" {
 
   source_ranges = ["0.0.0.0/0"]
 }
-
-# TODO: delete this one if everything still works. We have no gateway anyway
-# resource "google_compute_firewall" "db_network_egress" {
-#   name      = "db-network-egress"
-#   network   = google_compute_network.db_network.name
-#   direction = "EGRESS"
-
-#   allow {
-#     protocol = "tcp"
-#     ports    = ["443"]
-#   }
-# }
 
 # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_instance
 resource "google_compute_instance" "db_vm" {
@@ -69,7 +57,7 @@ resource "google_compute_instance" "db_vm" {
   metadata_startup_script = templatefile(
     "${path.module}/startup_script_template.sh",
     {
-      schemas = var.schemas
+      databases = var.databases
     }
   )
 }
