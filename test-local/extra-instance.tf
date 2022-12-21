@@ -1,4 +1,6 @@
 resource "google_compute_instance" "test_vm" {
+  count = var.extra_instance
+
   name         = "db-test-vm"
   machine_type = "e2-micro"
   zone         = var.zone

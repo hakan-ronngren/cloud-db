@@ -25,6 +25,12 @@ variable "zone" {
   default = "us-central1-a"
 }
 
+variable "extra_instance" {
+  type        = number
+  description = "Set to 1 to get a separate instance for connectivity testing"
+  default     = 0
+}
+
 module "db_vm" {
   source                  = "<FILL_ME_IN>"
   project                 = var.project
