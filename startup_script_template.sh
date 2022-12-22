@@ -154,14 +154,13 @@ cat > /root/playbook.yaml <<EOT
         content: |
           #!/bin/bash
 
-          cd /
-
           dump_file=\`date +%Y%m%d-%H%M\`.sql
           local_path=/tmp/\$dump_file
           gs_url=gs://${bucket_name}/\$dump_file
 
+          cd /
           sudo -u postgres pg_dumpall > \$local_path
-          gsutil -o 'Credentials:gs_service_key_file=/root/service-account.json' cp \$local_path \$gs_url
+          gsutil cp \$local_path \$gs_url
           rm \$local_path
         dest: "{{ pg_backup_script }}"
         mode: "0700"
@@ -171,15 +170,7 @@ cat > /root/playbook.yaml <<EOT
     - name: Set up cron job for backup
       ansible.builtin.copy:
         content: "0 12 * * * root {{ pg_backup_script }}\n"
-        dest: /etc/cron.d/psqlbackup
-
-    - name: Save service account json key
-      ansible.builtin.copy:
-        content: "{{ '${private_key}' | b64decode }}"
-        dest: "{{ sa_json_file }}"
-        mode: "0400"
-        owner: root
-        group: root
+        dest: /etc/cron.d/psql-backup
 
     - name: Write some instructions in motd
       ansible.builtin.copy:

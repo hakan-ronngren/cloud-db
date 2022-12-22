@@ -1,0 +1,1 @@
+alias db-vm='gcloud compute ssh "db-vm" --tunnel-through-iap 2> /dev/null'
