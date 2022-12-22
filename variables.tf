@@ -22,6 +22,12 @@ variable "data_disk_gigabytes" {
   description = "Size of database storage disk in GB. Default and smallest allowed value is 10."
 }
 
+variable "enable_pgadmin" {
+  type        = bool
+  default     = false
+  description = "Whether to enable the pgadmin web UI"
+}
+
 variable "databases" {
   type        = list(map(string))
   description = "List of databases to create. Every map has the keys name, user and md5_password."

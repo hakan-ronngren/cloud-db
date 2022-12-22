@@ -67,8 +67,9 @@ resource "google_compute_instance" "db_vm" {
   metadata_startup_script = templatefile(
     "${path.module}/startup_script_template.sh",
     {
-      databases   = var.databases
-      bucket_name = google_storage_bucket.backup_bucket.name
+      databases      = var.databases
+      bucket_name    = google_storage_bucket.backup_bucket.name
+      enable_pgadmin = var.enable_pgadmin
     }
   )
 

@@ -5,8 +5,8 @@
 
 terraform {
   backend "gcs" {
-    bucket = "name-of-my-bucket"
-    prefix = "db-vm"
+    bucket = "my-globally-unique-bucket-name"
+    prefix = "my-project/db-vm"
   }
 }
 
@@ -17,12 +17,12 @@ variable "project" {
 
 variable "region" {
   type    = string
-  default = "us-central1"
+  default = "europe-west1"
 }
 
 variable "zone" {
   type    = string
-  default = "us-central1-a"
+  default = "europe-west1-b"
 }
 
 variable "extra_instance" {
@@ -41,6 +41,8 @@ module "db_vm" {
   project = var.project
   region  = var.region
   zone    = var.zone
+
+  enable_pgadmin = true
 
   databases = [
     {

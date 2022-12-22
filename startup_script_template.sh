@@ -128,13 +128,14 @@ cat > /root/playbook.yaml <<EOT
       notify: restart_service
 
 %{ endfor ~}
+%{ if enable_pgadmin ~}
 
     - name: Ensure the presence of the pgadmin user (web UI)
       become: yes
       become_user: postgres
       community.postgresql.postgresql_user:
         name: pgadmin
-        password: changeme
+        password: pgadmin
         role_attr_flags: SUPERUSER
 
     - name: Ensure a pg_hba rule for the pgadmin user to log on
@@ -148,6 +149,16 @@ cat > /root/playbook.yaml <<EOT
         source: 127.0.0.1/32
         method: md5
       notify: restart_service
+
+%{ else ~}
+
+    - name: Stop and disable apache2, so we will have no pgadmin web UI
+      ansible.builtin.systemd:
+        name: apache2
+        state: stopped
+        enabled: false
+
+%{ endif ~}
 
     - name: Create backup script
       ansible.builtin.copy:
