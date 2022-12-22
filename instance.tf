@@ -9,10 +9,11 @@ resource "google_compute_network" "db_network" {
 
 # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_subnetwork
 resource "google_compute_subnetwork" "db_subnetwork" {
-  name          = "db-subnetwork"
-  network       = google_compute_network.db_network.id
-  ip_cidr_range = "192.168.1.0/24"
-  region        = var.region
+  name                     = "db-subnetwork"
+  network                  = google_compute_network.db_network.id
+  ip_cidr_range            = "192.168.1.0/24"
+  region                   = var.region
+  private_ip_google_access = true
 }
 
 # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_firewall
@@ -57,7 +58,9 @@ resource "google_compute_instance" "db_vm" {
   metadata_startup_script = templatefile(
     "${path.module}/startup_script_template.sh",
     {
-      databases = var.databases
+      databases   = var.databases
+      private_key = google_service_account_key.cloud_db_sa_key.private_key
+      bucket_name = google_storage_bucket.backup_bucket.name
     }
   )
 }

@@ -1,5 +1,7 @@
 ☐ Allow regular db users to access only their own db
-☐ Schedule db backups to a bucket
+☐ Optionally have uptime on a schedule to further reduce the cost
+☐ Avoid being surprised by seeing only empty databases when there is a new major version
+✔ Schedule db backups to a bucket @done(22-12-22 12:39)
 ✘ Create users with passwords stored in secrets @cancelled(22-12-21 11:38)
     - Documented the need to do this in real life. Our code sample doesn't need it.
 ✔ Change httpd to listen to 127.0.0.1:80 @done(22-12-20 13:23)

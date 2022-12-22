@@ -1,65 +1,204 @@
-# Set up the PostgreSQL data partition on the separate data disk
-cd /
-device=/dev/disk/by-id/google-db-data
-mount_point=/var/lib/postgresql
-echo "startup script running on `date`" >> /startup.log
-echo "device=$${device}, mount_point=$${mount_point}" >> /startup.log
-if ! grep -q "^$${device}" /etc/fstab ; then
-    fsck $${device} ; if [ "$$?" -eq 8 ] ; then
-        echo "formatting device" >> /startup.log
-        mkfs -t ext4 $${device}
-        formatted_at=`date`
-    fi
+cat > /root/playbook.yaml <<EOT
+- hosts: localhost
+  connection: local
+  vars:
+    fstype: ext4
+    data_disk_device: /dev/disk/by-id/google-db-data
+    pg_var_directory: /var/lib/postgresql
+    initial_pg_var_tarball: /tmp/pgdata.tar.bz2
+    sa_json_file: /root/service-account.json
+    pg_backup_script: /root/psql-backup
+  tasks:
+    - name: Create the ll shell alias that I keep using
+      ansible.builtin.lineinfile:
+        path: /etc/bash.bashrc
+        line: "alias ll='ls -l'"
+        state: present
 
-    echo "stopping postgresql" >> /startup.log
-    systemctl stop postgresql
-    sleep 15
-    tar cf /tmp/postgresql.tar $${mount_point}
-    echo "writing to /etc/fstab and mounting data disk" >> /startup.log
-    echo "$${device} $${mount_point} ext4 defaults 0 2" >> /etc/fstab
-    mount $${mount_point}
-    rm -f $${mount_point}/*/main/postmaster.pid
-    if [ -n "$${formatted_at}" ] ; then
-        echo "$${formatted_at}" > $${mount_point}/formatted_at
-        echo "unpacking fresh database into $${mount_point}" >> /startup.log
-        tar xf /tmp/postgresql.tar
-    fi
-    rm -f /tmp/postgresql.tar
-    chown -R postgres:postgres $${mount_point}
-    echo "starting postgresql" >> /startup.log
-    systemctl start postgresql
-fi
+    - name: Determine the installed PostgreSQL version
+      ansible.builtin.shell:
+        chdir: /etc/postgresql
+        cmd: "ls -1 | grep -E '^[0-9]+$'"
+      register: pg_version_result
+      changed_when: false
 
-# Find the pg_hba.conf file in the highest-version postgresql config directory
-hba_conf_path=`find /etc/postgresql -name pg_hba.conf | sort | tail -1`
+    - name: Register version as a fact
+      ansible.builtin.set_fact:
+        pg_version: "{{ pg_version_result.stdout }}"
+
+    - name: Stop PostgreSQL
+      ansible.builtin.systemd:
+        name: postgresql
+        state: stopped
+
+    - name: List mounted directories
+      ansible.builtin.command:
+        cmd: df
+      register: df_result
+      changed_when: false
+
+    - name: Unmount the data disk
+      when: pg_var_directory in df_result.stdout
+      ansible.builtin.command:
+        cmd: "umount {{ pg_var_directory }}"
+      register: unmount_result
+      until: unmount_result is not failed
+      retries: 30
+      delay: 1
+
+    - name: Have an {{ fstype }} filesystem expanded to the full size of the data disk
+      community.general.filesystem:
+        dev: "{{ data_disk_device }}"
+        fstype: "{{ fstype }}"
+        resizefs: yes
+
+    - name: Configure the data disk mount point in fstab
+      ansible.posix.mount:
+        src: "{{ data_disk_device }}"
+        path: "{{ pg_var_directory }}"
+        fstype: "{{ fstype }}"
+        state: present
+        boot: true
+        passno: "2"
+
+    - name: Prepare a tarball of the unused pg data directory
+      ansible.builtin.command:
+        cmd: "tar cfj {{ initial_pg_var_tarball }} -C {{ pg_var_directory }} {{ pg_version }}"
+      args:
+        warn: false
+
+    - name: Mount the data disk
+      ansible.builtin.command:
+        cmd: "mount {{ pg_var_directory }}"
+
+    - name: Ensure proper ownership of the data directory
+      file:
+        path: "{{ pg_var_directory }}"
+        owner: postgres
+        group: postgres
+
+    - name: See if there is a data directory for the current version in the mounted data directory
+      ansible.builtin.stat:
+        path: "{{ pg_var_directory }}/{{ pg_version }}"
+      register: pg_data_result
+
+    - name: Copy the initial pg data to the data disk
+      when: not pg_data_result.stat.exists
+      ansible.builtin.command:
+        cmd: "tar xfj {{ initial_pg_var_tarball }} -C {{ pg_var_directory }}"
+      args:
+        warn: false
+
+    - name: Delete the pg data tarball
+      file:
+        path: "{{ initial_pg_var_tarball }}"
+        state: absent
+
+    - name: Start PostgreSQL
+      ansible.builtin.systemd:
+        name: postgresql
+        state: started
 
 %{ for database in databases ~}
-echo "ensuring the presence of database ${database["name"]}" >> /startup.log
 
-ansible localhost --become --become-user postgres -c local \
-    -m community.postgresql.postgresql_db \
-    -a "name=${database["name"]}"
+    - name: Ensure the presence of database ${database["name"]}
+      become: yes
+      become_user: postgres
+      community.postgresql.postgresql_db:
+        name: "${database["name"]}"
 
-ansible localhost --become --become-user postgres -c local \
-    -m community.postgresql.postgresql_user \
-    -a "db=${database["name"]} name=${database["user"]} password='${database["md5_password"]}'"
+    - name: Ensure the presence of database user (role) ${database["user"]}
+      become: yes
+      become_user: postgres
+      community.postgresql.postgresql_user:
+        db: "${database["name"]}"
+        name: "${database["user"]}"
+        password: "${database["md5_password"]}"
 
-ansible localhost --become --become-user postgres -c local \
-    -m community.postgresql.postgresql_pg_hba \
-    -a "dest=$${hba_conf_path} contype=host databases=${database["name"]} users=${database["user"]} source=all method=password"
+    - name: Ensure a pg_hba rule for ${database["user"]} to log on
+      become: yes
+      become_user: postgres
+      community.postgresql.postgresql_pg_hba:
+        dest: /etc/postgresql/{{ pg_version }}/main/pg_hba.conf
+        contype: host
+        databases: "${database["name"]}"
+        users: "${database["user"]}"
+        source: all
+        method: password
+      notify: restart_service
+
 %{ endfor ~}
 
-echo "ensuring the presence of the pgadmin user" >> /startup.log
+    - name: Ensure the presence of the pgadmin user (web UI)
+      become: yes
+      become_user: postgres
+      community.postgresql.postgresql_user:
+        name: pgadmin
+        password: changeme
+        role_attr_flags: SUPERUSER
 
-ansible localhost --become --become-user postgres -c local \
-    -m community.postgresql.postgresql_user \
-    -a "name=pgadmin password='changeme' role_attr_flags=SUPERUSER"
+    - name: Ensure a pg_hba rule for the pgadmin user to log on
+      become: yes
+      become_user: postgres
+      community.postgresql.postgresql_pg_hba:
+        dest: /etc/postgresql/{{ pg_version }}/main/pg_hba.conf
+        contype: host
+        databases: all
+        users: pgadmin
+        source: 127.0.0.1/32
+        method: md5
+      notify: restart_service
 
-ansible localhost --become --become-user postgres -c local \
-    -m community.postgresql.postgresql_pg_hba \
-    -a "dest=$${hba_conf_path} contype=host databases=all users=pgadmin source=127.0.0.1/32 method=md5"
+    - name: Create backup script
+      ansible.builtin.copy:
+        content: |
+          #!/bin/bash
 
-echo "restarting postgresql" >> /startup.log
-systemctl restart postgresql
+          cd /
 
-printf 'To connect as user "foo" to the "foo" database:\n\n$ psql -U foo -h localhost\n\n' > /etc/motd
+          dump_file=\`date +%Y%m%d-%H%M\`.sql
+          local_path=/tmp/\$dump_file
+          gs_url=gs://${bucket_name}/\$dump_file
+
+          sudo -u postgres pg_dumpall > \$local_path
+          gsutil -o 'Credentials:gs_service_key_file=/root/service-account.json' cp \$local_path \$gs_url
+          rm \$local_path
+        dest: "{{ pg_backup_script }}"
+        mode: "0700"
+        owner: root
+        group: root
+
+    - name: Set up cron job for backup
+      ansible.builtin.copy:
+        content: "0 12 * * * root {{ pg_backup_script }}\n"
+        dest: /etc/cron.d/psqlbackup
+
+    - name: Save service account json key
+      ansible.builtin.copy:
+        content: "{{ '${private_key}' | b64decode }}"
+        dest: "{{ sa_json_file }}"
+        mode: "0400"
+        owner: root
+        group: root
+
+    - name: Write some instructions in motd
+      ansible.builtin.copy:
+        content: |+
+          To connect as user "foo" to the "foo" database:
+
+            $ psql -U foo -h localhost
+
+        dest: /etc/motd
+
+  handlers:
+    - name: Restart PostgreSQL
+      listen: restart_service
+      ansible.builtin.systemd:
+        name: postgresql
+        state: restarted
+EOT
+
+
+echo >> /startup.log
+echo "startup script running on `date`" >> /startup.log
+ansible-playbook -i "localhost," /root/playbook.yaml >> /startup.log 2>&1

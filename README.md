@@ -76,6 +76,12 @@ gcloud compute ssh db-vm --tunnel-through-iap -- -NL 8888:localhost:80
 
 You can then log on to http://localhost:8888/ and log on as `pgadmin` with password `changeme`.
 
+You can mark the db-vm as tainted to force the next `terraform apply` to recreate it:
+
+```bash
+terraform taint module.db_vm.google_compute_instance.db_vm
+```
+
 ## Use the module from your application terraform code
 
 You would use the module just like the code in the `test-local` directory does, but rather than including it from a local directory you would write `source = git::ssh://git@github.com/hakan-ronngren/cloud-db.git` or your own fork if you have one.
@@ -90,10 +96,12 @@ GCP networking fundamentals
 
 * https://www.networkmanagementsoftware.com/google-cloud-platform-gcp-networking-fundamentals/
 
-Would probably need VPC network peering to restrict access
+I need a serverless VPC access connector to allow Cloud Run to call this VM:
 
-* https://cloud.google.com/vpc/docs/vpc-peering
+* https://cloud.google.com/vpc/docs/shared-vpc
+  (Probably not needed, because being allowed to use max five projects I will run everything in one project anyway)
 * https://cloud.google.com/run/docs/configuring/connecting-vpc
+  (I could experiment with "run.googleapis.com/vpc-access-egress" = "private-ranges-only" rather than "all-traffic")
 
 Ansible PostgreSQL modules
 
