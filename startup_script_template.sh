@@ -7,7 +7,7 @@ cat > /root/playbook.yaml <<EOT
     pg_var_directory: /var/lib/postgresql
     initial_pg_var_tarball: /tmp/pgdata.tar.bz2
     sa_json_file: /root/service-account.json
-    pg_backup_script: /root/psql-backup
+    pg_backup_script: /var/lib/postgresql/psql-backup
   tasks:
     - name: Create the ll shell alias that I keep using
       ansible.builtin.lineinfile:
@@ -152,24 +152,29 @@ cat > /root/playbook.yaml <<EOT
     - name: Create backup script
       ansible.builtin.copy:
         content: |
-          #!/bin/bash
+          #!/bin/bash -e
 
+          logger "pg dump job started"
+
+          command=pg_dumpall
           dump_file=\`date +%Y%m%d-%H%M\`.sql
           local_path=/tmp/\$dump_file
           gs_url=gs://${bucket_name}/\$dump_file
 
           cd /
-          sudo -u postgres pg_dumpall > \$local_path
+          \$command > \$local_path
           gsutil cp \$local_path \$gs_url
           rm \$local_path
+
+          logger "pg dump => \$gs_url - ok"
         dest: "{{ pg_backup_script }}"
         mode: "0700"
-        owner: root
-        group: root
+        owner: postgres
+        group: postgres
 
     - name: Set up cron job for backup
       ansible.builtin.copy:
-        content: "0 12 * * * root {{ pg_backup_script }}\n"
+        content: "0 12 * * * postgres {{ pg_backup_script }}\n"
         dest: /etc/cron.d/psql-backup
 
     - name: Write some instructions in motd
