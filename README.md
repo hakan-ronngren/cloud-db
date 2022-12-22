@@ -27,6 +27,10 @@ So I decided to wire my own solution. I navigated to [Compute Engine | VM instan
 
 The separate data disk would allow me to recreate the VM at any time to upgrade it.
 
+## UNDER CONSTRUCTION
+
+This is still a work in progress. Next up is to decide whether or not to include features like a serverless VCP access connector for Cloud Run services to use the database. Maybe this is going to be a matter for the code that uses this module.
+
 ## Tools you'll need
 
 * [terraform](https://www.terraform.io) to turn the code in this repo into working infrastructure
