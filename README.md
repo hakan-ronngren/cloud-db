@@ -62,6 +62,8 @@ terraform init
 terraform apply
 ```
 
+The first time you apply, the operation might fail with a message saying that a Compute Engine System service account is lacking some permissions. There is code in this project to grant these permissions to that account, but it may take a couple of minutes until this code takes effect, and during that time your apply commands may fail.
+
 Even though the VM is not directly exposed to the Internet, you can connect to it with ssh through a tunnel:
 
 ```bash

@@ -1,1 +1,2 @@
-alias db-vm='gcloud compute ssh "db-vm" --tunnel-through-iap 2> /dev/null'
+alias db-vm='gcloud compute ssh db-vm --tunnel-through-iap 2> /dev/null'
+alias pgadmin-localhost-8888='gcloud compute ssh db-vm --tunnel-through-iap -- -NL 8888:localhost:80'

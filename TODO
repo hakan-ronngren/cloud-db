@@ -1,6 +1,6 @@
 ☐ Allow regular db users to access only their own db
-☐ Optionally have uptime on a schedule to further reduce the cost
 ☐ Avoid being surprised by seeing only empty databases when there is a new major version
+✔ Have uptime on a schedule to further reduce the cost @done(22-12-22 15:58)
 ✔ Schedule db backups to a bucket @done(22-12-22 12:39)
 ✘ Create users with passwords stored in secrets @cancelled(22-12-21 11:38)
     - Documented the need to do this in real life. Our code sample doesn't need it.

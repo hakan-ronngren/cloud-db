@@ -71,4 +71,6 @@ resource "google_compute_instance" "db_vm" {
       bucket_name = google_storage_bucket.backup_bucket.name
     }
   )
+
+  resource_policies = [google_compute_resource_policy.uptime_schedule.id]
 }

@@ -27,3 +27,13 @@ variable "databases" {
   description = "List of databases to create. Every map has the keys name, user and md5_password."
   sensitive   = true
 }
+
+variable "uptime_schedule" {
+  type        = map(string)
+  description = "Key/value pairs to define the uptime schedule: start and stop are cron expressions, time_zone is an IANA time zone name"
+  default = {
+    start     = "0 6 * * *"
+    stop      = "0 0 * * *"
+    time_zone = "Etc/UTC"
+  }
+}

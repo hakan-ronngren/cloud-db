@@ -55,4 +55,11 @@ module "db_vm" {
       # b4R
       md5_password = "md5d607d04a3fd0f89aab5d0400ffa6c38d"
     }
-  ]}
+  ]
+
+  uptime_schedule = {
+    start     = "0 6 * * *"
+    stop      = "0 0 * * *"
+    time_zone = "Europe/Stockholm"
+  }
+}
