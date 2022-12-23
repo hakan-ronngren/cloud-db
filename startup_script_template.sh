@@ -8,7 +8,25 @@ cat > /root/playbook.yaml <<EOT
     initial_pg_var_tarball: /tmp/pgdata.tar.bz2
     sa_json_file: /root/service-account.json
     pg_backup_script: /var/lib/postgresql/psql-backup
+    locale: en_US.UTF-8
   tasks:
+    - name: Use the "message of the day" to inform that provisioning is going on
+      ansible.builtin.copy:
+        content: "/root/playbook.yaml is currently running. You can follow /startup.log\n"
+        dest: /etc/motd
+
+    - name: Generate locale
+      community.general.locale_gen:
+        name: "{{ locale }}"
+
+    - name: Set locale
+      ansible.builtin.copy:
+        content: |
+          LANGUAGE="{{ locale }}"
+          LANG="{{ locale }}"
+          LC_ALL="{{ locale }}"
+        dest: /etc/environment
+
     - name: Create the ll shell alias that I keep using
       ansible.builtin.lineinfile:
         path: /etc/bash.bashrc
@@ -165,19 +183,23 @@ cat > /root/playbook.yaml <<EOT
         content: |
           #!/bin/bash -e
 
-          logger "pg dump job started"
-
-          command=pg_dumpall
-          dump_file=\`date +%Y%m%d-%H%M\`.sql
-          local_path=/tmp/\$dump_file
-          gs_url=gs://${bucket_name}/\$dump_file
+          script=\`dirname \$0\`
+          logger "\$script: started"
 
           cd /
-          \$command > \$local_path
-          gsutil cp \$local_path \$gs_url
+
+          dump_file=\`date +%Y%m%d-%H%M\`.sql
+          local_path=/tmp/\$dump_file
+
+%{ for database in databases ~}
+          gs_url=gs://${bucket_name}/${database["name"]}/\$dump_file
+          pg_dump "${database["name"]}" > \$local_path
+          gsutil -h "Content-Type:text/plain" cp \$local_path \$gs_url
+          logger "\$script: ${database["name"]} dumped to \$gs_url"
           rm \$local_path
 
-          logger "pg dump => \$gs_url - ok"
+%{ endfor ~}
+          logger "\$script: done"
         dest: "{{ pg_backup_script }}"
         mode: "0700"
         owner: postgres
@@ -188,14 +210,10 @@ cat > /root/playbook.yaml <<EOT
         content: "0 12 * * * postgres {{ pg_backup_script }}\n"
         dest: /etc/cron.d/psql-backup
 
-    - name: Write some instructions in motd
-      ansible.builtin.copy:
-        content: |+
-          To connect as user "foo" to the "foo" database:
-
-            $ psql -U foo -h localhost
-
-        dest: /etc/motd
+    - name: Have no "message of the day" logon message
+      ansible.builtin.file:
+        path: /etc/motd
+        state: absent
 
   handlers:
     - name: Restart PostgreSQL

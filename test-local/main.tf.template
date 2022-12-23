@@ -42,6 +42,8 @@ module "db_vm" {
   region  = var.region
   zone    = var.zone
 
+  dev_mode = true
+
   enable_pgadmin = true
 
   databases = [
@@ -50,12 +52,6 @@ module "db_vm" {
       user = "foo",
       # Fo0
       md5_password = "md58aa7e7121f6d0c4264a0795b4fff003e"
-    },
-    {
-      name = "bar",
-      user = "bar",
-      # b4R
-      md5_password = "md5d607d04a3fd0f89aab5d0400ffa6c38d"
     }
   ]
 

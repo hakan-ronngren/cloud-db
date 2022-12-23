@@ -56,7 +56,7 @@ Your server will start from an [image](https://console.cloud.google.com/compute/
 image-factory/build.sh
 ```
 
-## Start a test VM
+## Start a test VM from this repository
 
 The `test-local` directory contains Terraform code to include this module locally. Just create a copy of [main.tf.template](test-local/main.tf.template) called `main.tf`, and edit it to suit your setup. Then you can run these commands to start up a test instance:
 
@@ -75,13 +75,19 @@ Even though the VM is not directly exposed to the Internet, you can connect to i
 db-vm
 ```
 
+If you kept the _foo_ database definition in your `databases` argument, you can then connect to the database:
+
+```
+psql -U foo -h localhost
+```
+
 If you enable the [pgAdmin](https://www.pgadmin.org/) application (see the [variables.tf](variables.tf) file), you can reach it through an IAM tunnel like this:
 
 ```
 pgadmin-localhost-8888
 ```
 
-You can then browse to http://localhost:8888/, click on PostgreSQL under Servers in the left panel, and log on as `pgadmin` with password `pgadmin`.
+You can then browse to http://localhost:8888/, click on PostgreSQL under Servers in the left panel, and log on as _pgadmin_ with password _pgadmin_.
 
 This web UI is exposed only locally inside the VM, so there is no other way to reach it than through this tunnel.
 

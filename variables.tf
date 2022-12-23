@@ -28,6 +28,10 @@ variable "enable_pgadmin" {
   description = "Whether to enable the pgadmin web UI"
 }
 
+# Databases listed here will get backup copies in a bucket. The database/user settings in this map
+# will be reapplied every time you run terraform apply. However, if you delete a database from the
+# map, it will still remain in PostgreSQL. I just won't get provisioned anymore, and it won't be
+# covered by the backup script.
 variable "databases" {
   type        = list(map(string))
   description = "List of databases to create. Every map has the keys name, user and md5_password."
@@ -42,4 +46,10 @@ variable "uptime_schedule" {
     stop      = "0 0 * * *"
     time_zone = "Etc/UTC"
   }
+}
+
+variable "dev_mode" {
+  type        = bool
+  description = "If true, resources are created without protection against destruction and with pricing optimisations for frequent apply/destroy."
+  default     = false
 }
