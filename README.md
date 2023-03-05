@@ -29,7 +29,13 @@ The separate data disk would allow me to recreate the VM at any time to upgrade 
 
 ## UNDER CONSTRUCTION
 
-This is still a work in progress. Next up is to decide whether or not to include features like a serverless VCP access connector for Cloud Run services to use the database. Maybe this is going to be a matter for the code that uses this module.
+This is still a work in progress. Next up is to decide exactly how to connect to the DB from, say, Cloud Run.
+
+I could use a [serverless VPC access connector](https://cloud.google.com/run/docs/configuring/connecting-vpc) to allow Cloud Run to call this VM, but unfortunately, this connector would have to run on additional VMs that I do not want to pay for.
+
+Instead, I want to use some as-a-service solution. There is one: IAP. I already reach my VM with `gcloud compute ssh db-vm --tunnel-through-iap`. As always with SSH, I can also set up port forwarding so that I can reach the PostgreSQL port on the VM through a local port on my machine. Maybe I could use that mechanism from a Cloud Run service as well.
+
+Another alternative would be to use PubSub as a bridge, to send queries in one direction and results in the other. This option feels a bit awkward, and I am not sure about what latency I would get.
 
 ## Tools you'll need
 
@@ -81,6 +87,18 @@ If you kept the _foo_ database definition in your `databases` argument, you can 
 psql -U foo -h localhost
 ```
 
+Having the `psql` client on your local machine, you can also set up a tunnel in one shell:
+
+```
+psql-localhost-5432
+```
+
+... and run `psql` in another one:
+
+```
+psql -U foo -h localhost
+```
+
 If you enable the [pgAdmin](https://www.pgadmin.org/) application (see the [variables.tf](variables.tf) file), you can reach it through an IAM tunnel like this:
 
 ```
@@ -121,13 +139,6 @@ If pass the `--keep-vm` flag to the build script, the VM is stopped rather than 
 GCP networking fundamentals
 
 * https://www.networkmanagementsoftware.com/google-cloud-platform-gcp-networking-fundamentals/
-
-I need a serverless VPC access connector to allow Cloud Run to call this VM:
-
-* https://cloud.google.com/vpc/docs/shared-vpc
-  (Probably not needed, because being allowed to use max five projects I will run everything in one project anyway)
-* https://cloud.google.com/run/docs/configuring/connecting-vpc
-  (I could experiment with "run.googleapis.com/vpc-access-egress" = "private-ranges-only" rather than "all-traffic")
 
 Ansible PostgreSQL modules
 

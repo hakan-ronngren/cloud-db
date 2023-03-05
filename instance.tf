@@ -73,5 +73,5 @@ resource "google_compute_instance" "db_vm" {
     }
   )
 
-  resource_policies = [google_compute_resource_policy.uptime_schedule.id]
+  # resource_policies = [google_compute_resource_policy.uptime_schedule.id]
 }
