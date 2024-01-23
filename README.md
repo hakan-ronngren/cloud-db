@@ -143,3 +143,7 @@ GCP networking fundamentals
 Ansible PostgreSQL modules
 
 * https://docs.ansible.com/ansible/latest/collections/community/postgresql/index.html
+
+PostgreSQL version lifetimes:
+
+* https://endoflife.date/postgresql
